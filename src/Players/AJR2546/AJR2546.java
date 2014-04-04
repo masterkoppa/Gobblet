@@ -9,10 +9,7 @@ import Interface.GobbletPart1;
 import Interface.PlayerModule;
 import Interface.PlayerMove;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Random;
-import java.util.Stack;
+import java.util.*;
 
 public class AJR2546 implements PlayerModule, GobbletPart1 {
 
@@ -42,6 +39,16 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
 
     private class StackP extends Stack<Piece> {
         // No additional code needed
+
+        public StackP copy(){
+            StackP ret = new StackP();
+
+            for(Piece i : this){
+                ret.push(i);
+            }
+
+            return ret;
+        }
     }
 
     private class Player{
@@ -158,6 +165,16 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
         }
     }
 
+    private static StackP[][] copyBoard(StackP[][] board){
+        StackP[][] ret = new StackP[board.length][board[0].length];
+        for(int row = 0; row < board.length; row++){
+            for(int col = 0; col < board[row].length; col++){
+                ret[row][col] = board[row][col].copy();
+            }
+        }
+        return ret;
+    }
+
     @Override
     public void init(Logger logger, int pID) {
         this.log = logger;
@@ -186,7 +203,20 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
 
     @Override
     public void lastMove(PlayerMove playerMove) {
-        System.out.println("Updating board");
+        updateBoard(playerMove, board);
+
+        // Update the players
+        if(playerMove.getStartRow() == -1){
+            int pID = playerMove.getPlayerId();
+            int stack = playerMove.getStack();
+
+            Piece p = players[pID-1].takeFromStack(stack-1);
+        }
+        dumpGameState();
+    }
+
+    private void updateBoard(PlayerMove playerMove, StackP[][] board){
+        //System.out.println("Updating board");
 
         // Making a new play from stack
         if(playerMove.getStartRow() == -1){
@@ -198,7 +228,7 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
             int eCol = playerMove.getEndCol();
 
 
-            Piece p = players[pID-1].takeFromStack(stack-1);
+            Piece p = players[pID-1].peekAtStacks()[stack-1];
 
             board[eRow][eCol].push(p);
         }else{
@@ -213,8 +243,6 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
 
             board[eRow][eCol].push(p);
         }
-
-        dumpGameState();
     }
 
     @Override
@@ -227,16 +255,164 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
         PlayerMove[] moves = generatePossibleMoves();
         System.out.println("Possible moves: " + moves.length);
 
+        HashMap<Integer, PlayerMove> moveScored = new HashMap<Integer, PlayerMove>();
+
         // Pick a player move based on win condition, otherwise fall back to random
         for(PlayerMove m : moves){
-            if(makesWin(m, this.getID())){
-                System.out.println("Picked move to win");
+
+
+            //Analyze for win
+            int winPID = calcWin(m, this.board);
+
+            if(winPID == myID){
                 return m;
+            }else if(winPID != -1){
+                // Avoid this move
+                System.out.println("Enemy wins");
+                System.out.println("Enemy wins");
+                System.out.println("Enemy wins");
+                System.out.println("Enemy wins");
+                System.out.println("Enemy wins");
+                System.out.println("Enemy wins");
+            }else{
+                moveScored.put(scorePlay(m), m);
             }
         }
 
+        List<Integer> temp = new ArrayList<Integer>(new TreeSet<Integer>(moveScored.keySet()));
+
+        System.out.println("Move Score: " + temp.get(temp.size()-1));
+
+        return moveScored.get(temp.get(temp.size()-1));
         // Pick at random
-        return moves[randomizer.nextInt(moves.length)];
+        //return moves[randomizer.nextInt(moves.length)];
+    }
+
+    /**
+     * Score a non-winning move
+     * @param move PlayerMove to analyze
+     * @return the score
+     */
+    private int scorePlay(PlayerMove move){
+
+        int score = 0; //Start with 0
+        StackP[][] tmpBoard = copyBoard(board);
+
+        int sRow = move.getStartRow();
+        int sCol = move.getStartCol();
+
+        int eRow = move.getEndRow();
+        int eCol = move.getEndCol();
+
+        // Check if move is an enemy piece
+        if(!tmpBoard[eRow][eCol].empty()){
+
+            //Is it my piece?
+            if(tmpBoard[eRow][eCol].peek().getPlayerID() == myID){
+                score -= tmpBoard[eRow][eCol].peek().getSize(); //Remove the size that I just hid
+            }else{
+                score += (move.getSize() - tmpBoard[eRow][eCol].peek().getSize()) + 3; //Add the size that I removed from my opponent
+            }
+            updateBoard(move, tmpBoard);
+
+            //Was I already covering one?
+            if(sRow == -1 || tmpBoard[sRow][sCol].empty()){
+                score += 1; //Add 1 if we leave an empty space behind or from hand
+            }else if(tmpBoard[sRow][sCol].peek().getPlayerID() == myID){
+                score = score * 2;//Double the score since we uncovered our own
+            }else{
+                score = score / 2;
+            }
+
+        }
+
+        // Do next possible move analysis
+
+        // Generate all the possible moves for the opponent
+
+        // If any of these opponent moves generates a winning board for opponent, score = - score
+
+        // If any of these opponent moves generates for player, score = abs(score) * 3
+
+
+        // At the end add any preferential moves like take corners or unload pieces first
+
+        //Score at random
+        return score + randomizer.nextInt(5); //Add a random element to this
+    }
+
+    /**
+     * Returns the winner based on the proposed move
+     */
+    private int calcWin(PlayerMove move, StackP[][] board){
+
+        StackP[][] tempBoard = copyBoard(board);
+
+        updateBoard(move, tempBoard);
+
+
+        //Check horizontal lines
+        for(int row = 0; row < BOARD_SIZE; row++){
+            int pID = tempBoard[row][0].empty() ? -1 : tempBoard[row][0].peek().getPlayerID();
+            boolean flag = false;
+            for(int col = 1; col < BOARD_SIZE; col++){
+                if(tempBoard[row][col].empty() || tempBoard[row][col].peek().getPlayerID() != pID){
+                    flag = true;
+                    break;
+                }
+            }
+            if(!flag){
+                return pID;
+            }
+        }
+
+        //Check for vertical lines
+        for(int col = 0; col < BOARD_SIZE; col++){
+            int pID = tempBoard[0][col].empty() ? -1 : tempBoard[0][col].peek().getPlayerID();
+            boolean flag = false;
+            for(int row = 1; row < BOARD_SIZE; row++){
+                if(tempBoard[row][col].empty() || tempBoard[row][col].peek().getPlayerID() != pID){
+                    flag = true;
+                    break;
+                }
+            }
+            if(!flag){
+                return pID;
+            }
+        }
+
+        // Check first diagonal
+        int pID = tempBoard[0][0].empty() ? -1 : tempBoard[0][0].peek().getPlayerID();
+        int i = 1;
+        boolean flag = false;
+        while(i < BOARD_SIZE){
+            if(tempBoard[i][i].empty() || tempBoard[i][i].peek().getPlayerID() != pID){
+                flag = true;
+                break;
+            }
+            i++;
+        }
+        if(!flag){
+            return pID;
+        }
+
+        // Check second diagonal
+        pID = tempBoard[BOARD_SIZE-1][BOARD_SIZE-1].empty() ? -1 : tempBoard[BOARD_SIZE-1][BOARD_SIZE-1].peek().getPlayerID();
+        i = BOARD_SIZE-2;
+        flag = false;
+        while(i >= 0){
+            if(tempBoard[i][i].empty() || tempBoard[i][i].peek().getPlayerID() != pID){
+                flag = true;
+                break;
+            }
+            i--;
+        }
+        if(!flag){
+            return pID;
+        }
+
+
+        return -1;
     }
 
     /**

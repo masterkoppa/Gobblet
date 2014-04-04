@@ -16,7 +16,7 @@ PLAYER_MODULES AJR2546, EasyPlayer
 REMOTE False
 
 # Does the graphical UI display?
-UI False
+UI True
 
 # Enable/disable automatic gameplay
 # True = automatic - moves are made based on the animation speed
