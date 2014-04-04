@@ -1,0 +1,67 @@
+############# GWE (Gobblet) Java Game Client Config File ################
+############################ SET THIS FIRST ################################
+
+# Your API key
+# Get one at https://yendor.cs.rit.edu/~royale/gobblet/getapikey/
+API_KEY 03099d12386634308f4
+
+########################### MAIN GAME CONFIG ###############################
+
+# List of player modules separated by commas.  
+# The number of modules listed here specifies the number of players in the game 
+# To play via the GUI, use Human.  
+PLAYER_MODULES AJR2546, EasyPlayer
+
+# Enables multi-client play
+REMOTE False
+
+# Does the graphical UI display?
+UI False
+
+# Enable/disable automatic gameplay
+# True = automatic - moves are made based on the animation speed
+# False = manual - enter advances each move
+AUTO_PLAY True
+
+# Animation speed, in milliseconds (lower is faster)
+# Below 300 disables animations
+# Acceptable values: 1-3000
+ANIMATION_SPEED 500
+
+# Should the game log be saved in a log file during gameplay? 
+FILE_LOGGING True
+
+# Should the game log be printed during gameplay? 
+STDOUT_LOGGING True
+
+# PRE_MOVE ---
+# Moves to make before the players get control
+# This variable is unique in that it can be assigned many consecutive values.
+# When a game starts, the moves are executed in the order that they appear
+# in this file. They get executed after the players' and engine's init()
+# functions are called. Each move performed causes calls to the same notifying
+# functions that get called if a player had had its move() function called.
+# Note that the programmer must take care to alternate the player ID of each
+# successive PRE_MOVE to mimic what would happen in a normal game with the
+# number of players specified in PLAYER_MODULES, above.
+# The format is that of the PlayerMove constructor.
+# Below are listed four sample pre-moves for a 2-player game.
+# Uncomment them to use them.
+# Format for PlayerMove(playerId, stack, size, start, end)
+#
+
+
+# To see the moves above play from a pre-recording, go to
+# URL: https://yendor.cs.rit.edu/~royale/gobblet/gameview/public.5a47c1d6a75dfbd71abe361a72b7324d7510a206530a3bea3cbce/animations.500/gameid.392/
+
+
+################################# ADVANCED #####################################
+
+# Time limit
+PLAYER_MOVE_LIMIT 10.0
+
+# Web service domain (do not change)
+WEB_SERVICE_DOMAIN yendor.cs.rit.edu/~royale/gobblet
+
+# Secure? (do not change)
+HTTPS True
