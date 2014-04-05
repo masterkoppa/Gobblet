@@ -10,9 +10,187 @@ import Interface.PlayerModule;
 import Interface.PlayerMove;
 
 import java.util.*;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CyclicBarrier;
 
 public class AJR2546 implements PlayerModule, GobbletPart1 {
 
+    private class ThreadedScorer implements Runnable{
+        private int score = 0;
+        private int pWin = -1;
+
+        private StackP[][] board;
+        private Player[] players;
+        private PlayerMove move;
+        private CyclicBarrier barrier;
+
+        public ThreadedScorer(PlayerMove move, StackP[][] board, Player[] players, CyclicBarrier barrier){
+            this.board = board;
+            this.players = players;
+            this.move = move;
+            this.barrier = barrier;
+        }
+
+        public PlayerMove getMove(){
+            return move;
+        }
+
+        /**
+         * Returns the winner based on the proposed move
+         */
+        private int calcWin(){
+
+            StackP[][] tempBoard = AJR2546.copyBoard(board);
+
+            AJR2546.updateBoard(move, tempBoard, players);
+
+
+            //Check horizontal lines
+            for(int row = 0; row < BOARD_SIZE; row++){
+                int pID = tempBoard[row][0].empty() ? -1 : tempBoard[row][0].peek().getPlayerID();
+                boolean flag = false;
+                for(int col = 1; col < BOARD_SIZE; col++){
+                    if(tempBoard[row][col].empty() || tempBoard[row][col].peek().getPlayerID() != pID){
+                        flag = true;
+                        break;
+                    }
+                }
+                if(!flag){
+                    return pID;
+                }
+            }
+
+            //Check for vertical lines
+            for(int col = 0; col < BOARD_SIZE; col++){
+                int pID = tempBoard[0][col].empty() ? -1 : tempBoard[0][col].peek().getPlayerID();
+                boolean flag = false;
+                for(int row = 1; row < BOARD_SIZE; row++){
+                    if(tempBoard[row][col].empty() || tempBoard[row][col].peek().getPlayerID() != pID){
+                        flag = true;
+                        break;
+                    }
+                }
+                if(!flag){
+                    return pID;
+                }
+            }
+
+            // Check first diagonal
+            int pID = tempBoard[0][0].empty() ? -1 : tempBoard[0][0].peek().getPlayerID();
+            int i = 1;
+            boolean flag = false;
+            while(i < BOARD_SIZE){
+                if(tempBoard[i][i].empty() || tempBoard[i][i].peek().getPlayerID() != pID){
+                    flag = true;
+                    break;
+                }
+                i++;
+            }
+            if(!flag){
+                return pID;
+            }
+
+            // Check second diagonal
+            pID = tempBoard[BOARD_SIZE-1][BOARD_SIZE-1].empty() ? -1 : tempBoard[BOARD_SIZE-1][BOARD_SIZE-1].peek().getPlayerID();
+            i = BOARD_SIZE-2;
+            flag = false;
+            while(i >= 0){
+                if(tempBoard[i][i].empty() || tempBoard[i][i].peek().getPlayerID() != pID){
+                    flag = true;
+                    break;
+                }
+                i--;
+            }
+            if(!flag){
+                return pID;
+            }
+
+
+            return -1;
+        }
+
+        /**
+         * Score a non-winning move
+         * @return the score
+         */
+        private int scorePlay(){
+            int score = 0;
+
+            StackP[][] tmpBoard = AJR2546.copyBoard(board);
+
+            int sRow = move.getStartRow();
+            int sCol = move.getStartCol();
+
+            int eRow = move.getEndRow();
+            int eCol = move.getEndCol();
+
+            // Check if move is an enemy piece
+            if(!tmpBoard[eRow][eCol].empty()){
+
+                //Is it my piece?
+                if(tmpBoard[eRow][eCol].peek().getPlayerID() == myID){
+                    score -= tmpBoard[eRow][eCol].peek().getSize(); //Remove the size that I just hid
+                }else{
+                    score += (move.getSize() - tmpBoard[eRow][eCol].peek().getSize()) + 3; //Add the size that I removed from my opponent
+                }
+                AJR2546.updateBoard(move, tmpBoard, players);
+
+                //Was I already covering one?
+                if(sRow == -1 || tmpBoard[sRow][sCol].empty()){
+                    score += 1; //Add 1 if we leave an empty space behind or from hand
+                }else if(tmpBoard[sRow][sCol].peek().getPlayerID() == myID){
+                    score = score * 2;//Double the score since we uncovered our own
+                }else{
+                    score = score / 2;
+                }
+
+            }
+
+            // Do next possible move analysis
+
+            // Generate all the possible moves for the opponent
+
+            // If any of these opponent moves generates a winning board for opponent, score = - score
+
+            // If any of these opponent moves generates for player, score = abs(score) * 3
+
+
+            // At the end add any preferential moves like take corners or unload pieces first
+
+            if(move.getStartRow() == -1){
+                score += 5; //Prefer to unload game pieces
+            }
+
+            //Score at random
+            return score + randomizer.nextInt(5); //Add a random element to this
+        }
+
+        public void run(){
+            pWin = calcWin();
+
+            if(pWin != -1){
+                score = scorePlay();
+            }
+
+            try {
+                barrier.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (BrokenBarrierException e) {
+                e.printStackTrace();
+            }
+        }
+
+        public int getScore(){
+            return score;
+        }
+
+        public int getpWin(){
+            return pWin;
+        }
+
+    }
 
     private class Piece{
 
@@ -203,7 +381,7 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
 
     @Override
     public void lastMove(PlayerMove playerMove) {
-        updateBoard(playerMove, board);
+        updateBoard(playerMove, board, players);
 
         // Update the players
         if(playerMove.getStartRow() == -1){
@@ -215,7 +393,7 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
         dumpGameState();
     }
 
-    private void updateBoard(PlayerMove playerMove, StackP[][] board){
+    private static void updateBoard(PlayerMove playerMove, StackP[][] board, Player[] players){
         //System.out.println("Updating board");
 
         // Making a new play from stack
@@ -256,11 +434,19 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
         System.out.println("Possible moves: " + moves.length);
 
         HashMap<Integer, PlayerMove> moveScored = new HashMap<Integer, PlayerMove>();
-
+        ArrayList<ThreadedScorer> list = new ArrayList<ThreadedScorer>();
+        CyclicBarrier barrier = new CyclicBarrier(moves.length + 1);
         // Pick a player move based on win condition, otherwise fall back to random
         for(PlayerMove m : moves){
 
+            ThreadedScorer tmp = new ThreadedScorer(m, board, players, barrier);
+            //tmp.run();
+            Thread t = new Thread(tmp);
+            t.start();
 
+            list.add(tmp);
+
+            /*
             //Analyze for win
             int winPID = calcWin(m, this.board);
 
@@ -276,6 +462,29 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
                 System.out.println("Enemy wins");
             }else{
                 moveScored.put(scorePlay(m), m);
+            }*/
+        }
+
+        try {
+            barrier.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (BrokenBarrierException e) {
+            e.printStackTrace();
+        }
+
+        for(ThreadedScorer ts : list){
+            if(ts.getpWin() == myID){
+                return ts.getMove();
+            }else if(ts.getpWin() != -1){
+                System.out.println("Enemy wins");
+                System.out.println("Enemy wins");
+                System.out.println("Enemy wins");
+                System.out.println("Enemy wins");
+                System.out.println("Enemy wins");
+                System.out.println("Enemy wins");
+            }else{
+                moveScored.put(ts.getScore(), ts.getMove());
             }
         }
 
@@ -289,66 +498,13 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
     }
 
     /**
-     * Score a non-winning move
-     * @param move PlayerMove to analyze
-     * @return the score
-     */
-    private int scorePlay(PlayerMove move){
-
-        int score = 0; //Start with 0
-        StackP[][] tmpBoard = copyBoard(board);
-
-        int sRow = move.getStartRow();
-        int sCol = move.getStartCol();
-
-        int eRow = move.getEndRow();
-        int eCol = move.getEndCol();
-
-        // Check if move is an enemy piece
-        if(!tmpBoard[eRow][eCol].empty()){
-
-            //Is it my piece?
-            if(tmpBoard[eRow][eCol].peek().getPlayerID() == myID){
-                score -= tmpBoard[eRow][eCol].peek().getSize(); //Remove the size that I just hid
-            }else{
-                score += (move.getSize() - tmpBoard[eRow][eCol].peek().getSize()) + 3; //Add the size that I removed from my opponent
-            }
-            updateBoard(move, tmpBoard);
-
-            //Was I already covering one?
-            if(sRow == -1 || tmpBoard[sRow][sCol].empty()){
-                score += 1; //Add 1 if we leave an empty space behind or from hand
-            }else if(tmpBoard[sRow][sCol].peek().getPlayerID() == myID){
-                score = score * 2;//Double the score since we uncovered our own
-            }else{
-                score = score / 2;
-            }
-
-        }
-
-        // Do next possible move analysis
-
-        // Generate all the possible moves for the opponent
-
-        // If any of these opponent moves generates a winning board for opponent, score = - score
-
-        // If any of these opponent moves generates for player, score = abs(score) * 3
-
-
-        // At the end add any preferential moves like take corners or unload pieces first
-
-        //Score at random
-        return score + randomizer.nextInt(5); //Add a random element to this
-    }
-
-    /**
      * Returns the winner based on the proposed move
      */
     private int calcWin(PlayerMove move, StackP[][] board){
 
         StackP[][] tempBoard = copyBoard(board);
 
-        updateBoard(move, tempBoard);
+        updateBoard(move, tempBoard, players);
 
 
         //Check horizontal lines
@@ -415,65 +571,6 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
         return -1;
     }
 
-    /**
-     * Returns whether this move is a winning move for specified player or not
-     * @param move - The player move to evaluate
-     * @param pID - Player ID 1 or 2
-     * @return
-     */
-    private boolean makesWin(PlayerMove move, int pID){
-
-        // Check for lines
-        int row = move.getEndRow();
-        int col = move.getEndCol();
-
-        boolean hLine = true;
-        boolean vLine = true;
-        boolean vert1Line = true;
-        boolean vert2Line = true;
-
-        for(int c = 0; c < BOARD_SIZE; c++){
-            if(c == col && move.getStartRow() != row){
-                continue;
-            }
-            if(getTopOwnerOnBoard(row, c) != this.getID()){
-                hLine = false;
-                break;
-            }
-        }
-
-        for(int r = 0; r < BOARD_SIZE; r++){
-            if(r == row && move.getStartCol() != col){
-                continue;
-            }
-            if(getTopOwnerOnBoard(r, col) != this.getID()){
-                vLine = false;
-                break;
-            }
-        }
-
-        for(int d = 0; d < BOARD_SIZE; d++){
-            if(d == row && d == col && move.getStartRow() != row && move.getStartCol() != col){
-                continue;
-            }
-            if(getTopOwnerOnBoard(d, d) != this.getID()){
-                vert1Line = false;
-                break;
-            }
-        }
-
-        for(int d = 0; d < BOARD_SIZE; d++){
-            if(BOARD_SIZE-d-1 == row && d == col && move.getStartRow() != row && move.getStartCol() != col){
-                continue;
-            }
-            if(getTopOwnerOnBoard(BOARD_SIZE-d-1,  d) != this.getID()){
-                vert2Line = false;
-                break;
-            }
-        }
-
-        return hLine || vLine || vert1Line || vert2Line;
-    }
 
     /**
      * Generates the list of all valid and possible moves in the board.

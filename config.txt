@@ -10,7 +10,7 @@ API_KEY 03099d12386634308f4
 # List of player modules separated by commas.  
 # The number of modules listed here specifies the number of players in the game 
 # To play via the GUI, use Human.  
-PLAYER_MODULES AJR2546, EasyPlayer
+PLAYER_MODULES EasyPlayer, AJR2546
 
 # Enables multi-client play
 REMOTE False
@@ -58,7 +58,7 @@ STDOUT_LOGGING True
 ################################# ADVANCED #####################################
 
 # Time limit
-PLAYER_MOVE_LIMIT 10.0
+PLAYER_MOVE_LIMIT 0.1
 
 # Web service domain (do not change)
 WEB_SERVICE_DOMAIN yendor.cs.rit.edu/~royale/gobblet
