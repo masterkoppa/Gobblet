@@ -11,7 +11,6 @@ import Interface.PlayerMove;
 
 import java.util.*;
 import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 
 public class AJR2546 implements PlayerModule, GobbletPart1 {
@@ -247,6 +246,10 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
             this.myID = id;
         }
 
+        public int getMyID(){
+            return myID;
+        }
+
         public String getStackString(){
             String ret = "";
 
@@ -388,7 +391,7 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
             int pID = playerMove.getPlayerId();
             int stack = playerMove.getStack();
 
-            Piece p = players[pID-1].takeFromStack(stack-1);
+            players[pID-1].takeFromStack(stack-1);
         }
         dumpGameState();
     }
@@ -498,81 +501,6 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
     }
 
     /**
-     * Returns the winner based on the proposed move
-     */
-    private int calcWin(PlayerMove move, StackP[][] board){
-
-        StackP[][] tempBoard = copyBoard(board);
-
-        updateBoard(move, tempBoard, players);
-
-
-        //Check horizontal lines
-        for(int row = 0; row < BOARD_SIZE; row++){
-            int pID = tempBoard[row][0].empty() ? -1 : tempBoard[row][0].peek().getPlayerID();
-            boolean flag = false;
-            for(int col = 1; col < BOARD_SIZE; col++){
-                if(tempBoard[row][col].empty() || tempBoard[row][col].peek().getPlayerID() != pID){
-                    flag = true;
-                    break;
-                }
-            }
-            if(!flag){
-                return pID;
-            }
-        }
-
-        //Check for vertical lines
-        for(int col = 0; col < BOARD_SIZE; col++){
-            int pID = tempBoard[0][col].empty() ? -1 : tempBoard[0][col].peek().getPlayerID();
-            boolean flag = false;
-            for(int row = 1; row < BOARD_SIZE; row++){
-                if(tempBoard[row][col].empty() || tempBoard[row][col].peek().getPlayerID() != pID){
-                    flag = true;
-                    break;
-                }
-            }
-            if(!flag){
-                return pID;
-            }
-        }
-
-        // Check first diagonal
-        int pID = tempBoard[0][0].empty() ? -1 : tempBoard[0][0].peek().getPlayerID();
-        int i = 1;
-        boolean flag = false;
-        while(i < BOARD_SIZE){
-            if(tempBoard[i][i].empty() || tempBoard[i][i].peek().getPlayerID() != pID){
-                flag = true;
-                break;
-            }
-            i++;
-        }
-        if(!flag){
-            return pID;
-        }
-
-        // Check second diagonal
-        pID = tempBoard[BOARD_SIZE-1][BOARD_SIZE-1].empty() ? -1 : tempBoard[BOARD_SIZE-1][BOARD_SIZE-1].peek().getPlayerID();
-        i = BOARD_SIZE-2;
-        flag = false;
-        while(i >= 0){
-            if(tempBoard[i][i].empty() || tempBoard[i][i].peek().getPlayerID() != pID){
-                flag = true;
-                break;
-            }
-            i--;
-        }
-        if(!flag){
-            return pID;
-        }
-
-
-        return -1;
-    }
-
-
-    /**
      * Generates the list of all valid and possible moves in the board.
      *
      * From here we will choose what moves to use.
@@ -602,7 +530,7 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
                 for(Coordinate coord : available.keySet()){
                     // Dont move to the same place
                     if(coord.getRow() == r && coord.getCol() == c){
-                        continue;
+                        // Do nothing
                     }else{
                         Piece p = available.get(coord);
                         // Make new move moving from current location to r,c
