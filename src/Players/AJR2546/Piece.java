@@ -24,4 +24,18 @@ public class Piece{
     public String toString(){
         return size + "(" + playerID + ") ";
     }
+
+    public boolean equals(Object o){
+        try{
+            Piece p = (Piece)o;
+
+            if(p.size != this.size || p.playerID != this.playerID){
+                return false;
+            }else {
+                return true;
+            }
+        }catch (ClassCastException ex){
+            return false;
+        }
+    }
 }

@@ -4,7 +4,6 @@
 package Players.AJR2546;
 
 import Engine.Logger;
-import Interface.Coordinate;
 import Interface.GobbletPart1;
 import Interface.PlayerModule;
 import Interface.PlayerMove;
@@ -102,14 +101,6 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
     @Override
     public void lastMove(PlayerMove playerMove) {
         BoardUtils.updateBoard(playerMove, board, players);
-
-        // Update the players
-        if(playerMove.getStartRow() == -1){
-            int pID = playerMove.getPlayerId();
-            int stack = playerMove.getStack();
-
-            players[pID-1].takeFromStack(stack-1);
-        }
         dumpGameState();
     }
 
@@ -122,6 +113,10 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
 
     @Override
     public PlayerMove move() {
+
+        Graph g = Graph.buildFromBoard(board, players, myID);
+        g.printGraph();
+
         PlayerMove[] moves = generatePossibleMoves();
         System.out.println("Possible moves: " + moves.length);
 
@@ -196,77 +191,7 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
      * @return PlayerMove array of what's possible
      */
     private PlayerMove[] generatePossibleMoves(){
-
-        // Get all the pieces that I can move
-        HashMap<Coordinate, Piece> available = new HashMap<Coordinate, Piece>();
-
-
-        // Find all the pieces at the top of the board
-        for(int r = 0; r < BoardUtils.BOARD_SIZE; r++){
-            for(int c = 0; c < BoardUtils.BOARD_SIZE; c++){
-                if(!board[r][c].empty() && board[r][c].peek().getPlayerID() == this.getID()){
-                    available.put(new Coordinate(r,c), board[r][c].peek());
-                }
-            }
-        }
-
-        ArrayList<PlayerMove> intraBoardMoves = new ArrayList<PlayerMove>();
-
-        // Generate the moves from all the available ones, valid and invalid
-        for(int r = 0; r < BoardUtils.BOARD_SIZE; r++){
-            for(int c = 0; c < BoardUtils.BOARD_SIZE; c++){
-
-                for(Coordinate coord : available.keySet()){
-                    // Dont move to the same place
-                    if(!(coord.getRow() == r && coord.getCol() == c)){
-                        Piece p = available.get(coord);
-                        // Make new move moving from current location to r,c
-                        intraBoardMoves.add(new PlayerMove(this.getID(), 0, p.getSize(), coord, new Coordinate(r,c)));
-                    }
-                }
-
-            }
-        }
-
-        // Store the valid moves for intra board things
-        ArrayList<PlayerMove> validMoves = new ArrayList<PlayerMove>();
-
-        // Validate all the moves generated
-        for(PlayerMove i : intraBoardMoves){
-            if(validateMove(i)){
-                validMoves.add(i);
-            }
-        }
-
-        ArrayList<PlayerMove> stackMoves = new ArrayList<PlayerMove>();
-        // Deal with the player stacks
-        for(int r = 0; r < BoardUtils.BOARD_SIZE; r++){
-            for(int c = 0; c < BoardUtils.BOARD_SIZE; c++){
-                for(int s = 0; s < BoardUtils.NUM_STACKS; s++){
-
-                    Piece p = players[this.getID()-1].peekAtStacks()[s];
-
-                    // If the stack is empty, continue
-                    if(p == null){
-                        continue;
-                    }
-                    stackMoves.add(new PlayerMove(this.getID(), s+1, p.getSize(),
-                            new Coordinate(-1,-1), new Coordinate(r,c)));
-                }
-            }
-        }
-
-        // Validate all these moves
-        for(PlayerMove i : stackMoves){
-            if(validateMove(i))
-                validMoves.add(i);
-        }
-
-        PlayerMove[] ret = new PlayerMove[validMoves.size()];
-
-        validMoves.toArray(ret);
-
-        return ret;
+        return BoardUtils.generatePossibleMoves(board,players,this.getID());
     }
 
     /**

@@ -1,6 +1,10 @@
 package Players.AJR2546;
 
+import Interface.Coordinate;
 import Interface.PlayerMove;
+
+import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Created by Andres on 4/15/2014.
@@ -38,6 +42,14 @@ public class BoardUtils {
             int eCol = playerMove.getEndCol();
 
             board[eRow][eCol].push(p);
+        }
+
+        // Update the players
+        if(playerMove.getStartRow() == -1){
+            int pID = playerMove.getPlayerId();
+            int stack = playerMove.getStack();
+
+            players[pID-1].takeFromStack(stack-1);
         }
     }
 
@@ -102,6 +114,165 @@ public class BoardUtils {
         return true;
     }
 
+    /**
+     * Generates the list of all valid and possible moves in the board.
+     *
+     * From here we will choose what moves to use.
+     * @return PlayerMove array of what's possible
+     */
+    public static PlayerMove[] generatePossibleMoves(StackP[][] board, Player[] players, int pID){
+
+        // Get all the pieces that I can move
+        HashMap<Coordinate, Piece> available = new HashMap<Coordinate, Piece>();
+
+
+        // Find all the pieces at the top of the board
+        for(int r = 0; r < BoardUtils.BOARD_SIZE; r++){
+            for(int c = 0; c < BoardUtils.BOARD_SIZE; c++){
+                if(!board[r][c].empty() && board[r][c].peek().getPlayerID() == pID){
+                    available.put(new Coordinate(r,c), board[r][c].peek());
+                }
+            }
+        }
+
+        ArrayList<PlayerMove> intraBoardMoves = new ArrayList<PlayerMove>();
+
+        // Generate the moves from all the available ones, valid and invalid
+        for(int r = 0; r < BoardUtils.BOARD_SIZE; r++){
+            for(int c = 0; c < BoardUtils.BOARD_SIZE; c++){
+
+                for(Coordinate coord : available.keySet()){
+                    // Dont move to the same place
+                    if(!(coord.getRow() == r && coord.getCol() == c)){
+                        Piece p = available.get(coord);
+                        // Make new move moving from current location to r,c
+                        intraBoardMoves.add(new PlayerMove(pID, 0, p.getSize(), coord, new Coordinate(r,c)));
+                    }
+                }
+
+            }
+        }
+
+        // Store the valid moves for intra board things
+        ArrayList<PlayerMove> validMoves = new ArrayList<PlayerMove>();
+
+        // Validate all the moves generated
+        for(PlayerMove i : intraBoardMoves){
+            if(BoardUtils.validateMove(i,board,players)){
+                validMoves.add(i);
+            }
+        }
+
+        ArrayList<PlayerMove> stackMoves = new ArrayList<PlayerMove>();
+        // Deal with the player stacks
+        for(int r = 0; r < BoardUtils.BOARD_SIZE; r++){
+            for(int c = 0; c < BoardUtils.BOARD_SIZE; c++){
+                for(int s = 0; s < BoardUtils.NUM_STACKS; s++){
+
+                    Piece p = players[pID-1].peekAtStacks()[s];
+
+                    // If the stack is empty, continue
+                    if(p == null){
+                        continue;
+                    }
+                    stackMoves.add(new PlayerMove(pID, s+1, p.getSize(),
+                            new Coordinate(-1,-1), new Coordinate(r,c)));
+                }
+            }
+        }
+
+        // Validate all these moves
+        for(PlayerMove i : stackMoves){
+            if(BoardUtils.validateMove(i,board,players))
+                validMoves.add(i);
+        }
+
+        PlayerMove[] ret = new PlayerMove[validMoves.size()];
+
+        validMoves.toArray(ret);
+
+        return ret;
+    }
+
+    public static int checkWinner(StackP[][] tempBoard){
+        //Check horizontal lines
+        for(int row = 0; row < BoardUtils.BOARD_SIZE; row++){
+            int pID = tempBoard[row][0].empty() ? -1 : tempBoard[row][0].peek().getPlayerID();
+            boolean flag = false;
+            for(int col = 1; col < BoardUtils.BOARD_SIZE; col++){
+                if(tempBoard[row][col].empty() || tempBoard[row][col].peek().getPlayerID() != pID){
+                    flag = true;
+                    break;
+                }
+            }
+            if(!flag){
+                return pID;
+            }
+        }
+
+        //Check for vertical lines
+        for(int col = 0; col < BoardUtils.BOARD_SIZE; col++){
+            int pID = tempBoard[0][col].empty() ? -1 : tempBoard[0][col].peek().getPlayerID();
+            boolean flag = false;
+            for(int row = 1; row < BoardUtils.BOARD_SIZE; row++){
+                if(tempBoard[row][col].empty() || tempBoard[row][col].peek().getPlayerID() != pID){
+                    flag = true;
+                    break;
+                }
+            }
+            if(!flag){
+                return pID;
+            }
+        }
+
+        // Check first diagonal
+        int pID = tempBoard[0][0].empty() ? -1 : tempBoard[0][0].peek().getPlayerID();
+        int i = 1;
+        boolean flag = false;
+        while(i < BoardUtils.BOARD_SIZE){
+            if(tempBoard[i][i].empty() || tempBoard[i][i].peek().getPlayerID() != pID){
+                flag = true;
+                break;
+            }
+            i++;
+        }
+        if(!flag){
+            return pID;
+        }
+
+        // Check second diagonal
+        pID = tempBoard[BoardUtils.BOARD_SIZE-1][BoardUtils.BOARD_SIZE-1].empty() ? -1 : tempBoard[BoardUtils.BOARD_SIZE-1][BoardUtils.BOARD_SIZE-1].peek().getPlayerID();
+        i = BoardUtils.BOARD_SIZE-2;
+        flag = false;
+        while(i >= 0){
+            if(tempBoard[i][i].empty() || tempBoard[i][i].peek().getPlayerID() != pID){
+                flag = true;
+                break;
+            }
+            i--;
+        }
+        if(!flag){
+            return pID;
+        }
+
+
+        return -1;
+    }
+
+    /**
+     * Returns the winner based on the proposed move
+     */
+    public static int calcWin(StackP[][] board, Player[] players, PlayerMove move){
+
+        StackP[][] tempBoard = BoardUtils.copyBoard(board);
+        Player[] newPlayers = BoardUtils.copyPlayers(players);
+
+        BoardUtils.updateBoard(move, tempBoard, newPlayers);
+
+        return BoardUtils.checkWinner(tempBoard);
+
+    }
+
     public static StackP[][] copyBoard(StackP[][] board){
         StackP[][] ret = new StackP[board.length][board[0].length];
         for(int row = 0; row < board.length; row++){
@@ -109,6 +280,16 @@ public class BoardUtils {
                 ret[row][col] = board[row][col].copy();
             }
         }
+        return ret;
+    }
+
+    public static Player[] copyPlayers(Player[] players){
+        Player[] ret = new Player[players.length];
+
+        for(int i = 0; i < players.length; i++){
+            ret[i] = players[i].copyPlayer();
+        }
+
         return ret;
     }
 

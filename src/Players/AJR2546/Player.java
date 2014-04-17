@@ -72,4 +72,19 @@ public class Player{
         return p;
     }
 
+    public boolean equals(Object o){
+        try{
+            Player p = (Player)o;
+
+            for(int i = 0; i < this.stacks.length; i++){
+                if(!this.stacks[i].equals(p.stacks[i])){
+                    return false;
+                }
+            }
+            return true;
+        }catch (ClassCastException ex){
+            return false;
+        }
+    }
+
 }

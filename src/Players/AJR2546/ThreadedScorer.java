@@ -37,74 +37,7 @@ public class ThreadedScorer implements Runnable{
      * Returns the winner based on the proposed move
      */
     private int calcWin(){
-
-        StackP[][] tempBoard = BoardUtils.copyBoard(board);
-
-        BoardUtils.updateBoard(move, tempBoard, players);
-
-
-        //Check horizontal lines
-        for(int row = 0; row < BoardUtils.BOARD_SIZE; row++){
-            int pID = tempBoard[row][0].empty() ? -1 : tempBoard[row][0].peek().getPlayerID();
-            boolean flag = false;
-            for(int col = 1; col < BoardUtils.BOARD_SIZE; col++){
-                if(tempBoard[row][col].empty() || tempBoard[row][col].peek().getPlayerID() != pID){
-                    flag = true;
-                    break;
-                }
-            }
-            if(!flag){
-                return pID;
-            }
-        }
-
-        //Check for vertical lines
-        for(int col = 0; col < BoardUtils.BOARD_SIZE; col++){
-            int pID = tempBoard[0][col].empty() ? -1 : tempBoard[0][col].peek().getPlayerID();
-            boolean flag = false;
-            for(int row = 1; row < BoardUtils.BOARD_SIZE; row++){
-                if(tempBoard[row][col].empty() || tempBoard[row][col].peek().getPlayerID() != pID){
-                    flag = true;
-                    break;
-                }
-            }
-            if(!flag){
-                return pID;
-            }
-        }
-
-        // Check first diagonal
-        int pID = tempBoard[0][0].empty() ? -1 : tempBoard[0][0].peek().getPlayerID();
-        int i = 1;
-        boolean flag = false;
-        while(i < BoardUtils.BOARD_SIZE){
-            if(tempBoard[i][i].empty() || tempBoard[i][i].peek().getPlayerID() != pID){
-                flag = true;
-                break;
-            }
-            i++;
-        }
-        if(!flag){
-            return pID;
-        }
-
-        // Check second diagonal
-        pID = tempBoard[BoardUtils.BOARD_SIZE-1][BoardUtils.BOARD_SIZE-1].empty() ? -1 : tempBoard[BoardUtils.BOARD_SIZE-1][BoardUtils.BOARD_SIZE-1].peek().getPlayerID();
-        i = BoardUtils.BOARD_SIZE-2;
-        flag = false;
-        while(i >= 0){
-            if(tempBoard[i][i].empty() || tempBoard[i][i].peek().getPlayerID() != pID){
-                flag = true;
-                break;
-            }
-            i--;
-        }
-        if(!flag){
-            return pID;
-        }
-
-
-        return -1;
+        return BoardUtils.calcWin(board, players, move);
     }
 
     /**
@@ -115,6 +48,7 @@ public class ThreadedScorer implements Runnable{
         int score = 0;
 
         StackP[][] tmpBoard = BoardUtils.copyBoard(board);
+        Player[] players = BoardUtils.copyPlayers(this.players);
 
         int sRow = move.getStartRow();
         int sCol = move.getStartCol();

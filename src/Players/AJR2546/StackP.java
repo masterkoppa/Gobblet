@@ -17,4 +17,24 @@ public class StackP extends Stack<Piece> {
 
         return ret;
     }
+
+    public boolean equals(Object o){
+        try{
+            StackP p = (StackP)o;
+
+            if(p.size() == this.size()){
+                for(int i = 0; i < this.size(); i++){
+                    if(!p.get(i).equals(this.get(i))){
+                        return false;
+                    }
+                }
+            }else{
+                return false;
+            }
+            return true;
+
+        }catch (ClassCastException ex){
+            return false;
+        }
+    }
 }
