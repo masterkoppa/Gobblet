@@ -5,11 +5,15 @@ import Interface.PlayerMove;
 import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Andres on 4/15/2014.
  */
 public class ThreadedScorer implements Runnable{
+
+    public static final AtomicInteger counter = new AtomicInteger(1);
+
     private int score = 0;
     private int pWin = -1;
     private int myID = -1;
@@ -90,8 +94,25 @@ public class ThreadedScorer implements Runnable{
         // At the end add any preferential moves like take corners or unload pieces first
 
         if(move.getStartRow() == -1){
-            score += 5; //Prefer to unload game pieces
+            score += 10; //Prefer to unload game pieces
         }
+
+
+        // Check to see if my move makes them win
+        int enemyID = ((myID) % 2) + 1;
+
+        PlayerMove[] enemyMoves = BoardUtils.generatePossibleMoves(tmpBoard,players, enemyID);
+
+        for(PlayerMove m: enemyMoves){
+            int pWin = BoardUtils.calcWin(tmpBoard, players, m);
+
+            if(pWin == enemyID){
+                return Integer.MIN_VALUE;
+            }else if(pWin == myID){
+                score += 10;
+            }
+        }
+
 
         //Score at random
         return score + randomizer.nextInt(5); //Add a random element to this
@@ -100,20 +121,27 @@ public class ThreadedScorer implements Runnable{
     public void run(){
         pWin = calcWin();
 
-        if(pWin != -1){
+        if(pWin == myID){
+            score = Integer.MAX_VALUE;
+        }else if(pWin != -1){
+            score = Integer.MIN_VALUE;
+        }else{
             score = scorePlay();
         }
-
+        /*
         try {
             barrier.await();
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (BrokenBarrierException e) {
             e.printStackTrace();
-        }
+        }*/
+        //System.out.println("Counter: " + counter.addAndGet(1));
+
     }
 
     public int getScore(){
+        //System.out.println("Score: " + score);
         return score;
     }
 

@@ -225,6 +225,26 @@ public class BoardUtils {
             }
         }
 
+
+        int pId00 = tempBoard[0][0].empty() ? -1 : tempBoard[0][0].peek().getPlayerID();
+        int pId11 = tempBoard[1][1].empty() ? -1 : tempBoard[1][1].peek().getPlayerID();
+        int pId22 = tempBoard[2][2].empty() ? -1 : tempBoard[2][2].peek().getPlayerID();
+        int pId33 = tempBoard[3][3].empty() ? -1 : tempBoard[3][3].peek().getPlayerID();
+
+        if(pId00 == pId11 && pId11 == pId22 && pId22 == pId33){
+            return pId00;
+        }
+
+        int pId03 = tempBoard[0][3].empty() ? -1 : tempBoard[0][3].peek().getPlayerID();
+        int pId12 = tempBoard[1][2].empty() ? -1 : tempBoard[1][2].peek().getPlayerID();
+        int pId21 = tempBoard[2][1].empty() ? -1 : tempBoard[2][1].peek().getPlayerID();
+        int pId30 = tempBoard[3][0].empty() ? -1 : tempBoard[3][0].peek().getPlayerID();
+
+        if(pId03 == pId12 && pId12 == pId21 && pId21 == pId30){
+            return pId03;
+        }
+
+
         // Check first diagonal
         int pID = tempBoard[0][0].empty() ? -1 : tempBoard[0][0].peek().getPlayerID();
         int i = 1;
@@ -241,8 +261,9 @@ public class BoardUtils {
         }
 
         // Check second diagonal
-        pID = tempBoard[BoardUtils.BOARD_SIZE-1][BoardUtils.BOARD_SIZE-1].empty() ? -1 : tempBoard[BoardUtils.BOARD_SIZE-1][BoardUtils.BOARD_SIZE-1].peek().getPlayerID();
-        i = BoardUtils.BOARD_SIZE-2;
+        int s = BOARD_SIZE-1;
+        pID = tempBoard[s][s].empty() ? -1 : tempBoard[s][s].peek().getPlayerID();
+        i = BoardUtils.BOARD_SIZE-1;
         flag = false;
         while(i >= 0){
             if(tempBoard[i][i].empty() || tempBoard[i][i].peek().getPlayerID() != pID){

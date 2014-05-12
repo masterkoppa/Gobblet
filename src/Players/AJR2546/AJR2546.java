@@ -101,7 +101,7 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
     @Override
     public void lastMove(PlayerMove playerMove) {
         BoardUtils.updateBoard(playerMove, board, players);
-        dumpGameState();
+        //dumpGameState();
     }
 
 
@@ -114,15 +114,18 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
     @Override
     public PlayerMove move() {
 
-        Graph g = Graph.buildFromBoard(board, players, myID);
-        g.printGraph();
+        //Graph g = Graph.buildFromBoard(board, players, myID);
+        //g.printGraph();
 
         PlayerMove[] moves = generatePossibleMoves();
         System.out.println("Possible moves: " + moves.length);
 
         HashMap<Integer, PlayerMove> moveScored = new HashMap<Integer, PlayerMove>();
         ArrayList<ThreadedScorer> list = new ArrayList<ThreadedScorer>();
+        ArrayList<Thread> threads = new ArrayList<Thread>();
         CyclicBarrier barrier = new CyclicBarrier(moves.length + 1);
+
+        int count = 0;
         // Pick a player move based on win condition, otherwise fall back to random
         for(PlayerMove m : moves){
 
@@ -132,6 +135,9 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
             t.start();
 
             list.add(tmp);
+            threads.add(t);
+
+            count++;
 
             /*
             //Analyze for win
@@ -152,34 +158,31 @@ public class AJR2546 implements PlayerModule, GobbletPart1 {
             }*/
         }
 
-        try {
-            barrier.await();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (BrokenBarrierException e) {
-            e.printStackTrace();
+        for(Thread t : threads){
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
+        ThreadedScorer.counter.set(0);
 
         for(ThreadedScorer ts : list){
-            if(ts.getpWin() == myID){
-                return ts.getMove();
-            }else if(ts.getpWin() != -1){
-                System.out.println("Enemy wins");
-                System.out.println("Enemy wins");
-                System.out.println("Enemy wins");
-                System.out.println("Enemy wins");
-                System.out.println("Enemy wins");
-                System.out.println("Enemy wins");
-            }else{
-                moveScored.put(ts.getScore(), ts.getMove());
-            }
+            moveScored.put(ts.getScore(), ts.getMove());
         }
 
         List<Integer> temp = new ArrayList<Integer>(new TreeSet<Integer>(moveScored.keySet()));
 
-        System.out.println("Move Score: " + temp.get(temp.size()-1));
+        int index = temp.size()-1;
 
-        return moveScored.get(temp.get(temp.size()-1));
+
+        //System.out.println("Move Score: " + temp.get(index));
+
+
+        System.out.println("Player making move: " + moveScored.get(temp.get(index)));
+        System.out.println("Player Score:       " + temp.get(index));
+
+        return moveScored.get(temp.get(index));
         // Pick at random
         //return moves[randomizer.nextInt(moves.length)];
     }
